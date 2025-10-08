@@ -1,0 +1,5 @@
+&inputpp
+   outdir		= './wan_out'
+   prefix		= 'bi_wan'
+   seedname		= 'wan'
+/
