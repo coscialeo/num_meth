@@ -1,0 +1,44 @@
+&control
+   calculation			= 'bands'
+   restart_mode			= 'from_scratch'
+   pseudo_dir			= '../pseudo/'
+   outdir			= './bands_out/'
+   prefix			= 'bi_bands'
+   
+/
+
+&system
+   ibrav			= 4
+   celldm(1)			= 8.22094664
+   celldm(3)			= 5.0
+   nat				= 2
+   ntyp				= 1
+   noncolin			= .true.
+   lspinorb			= .true.
+   starting_magnetization	= 0.01
+   ecutwfc			= 75
+   ecutrho			= 300
+   occupations			= 'fixed'
+   nbnd				= 18
+/
+
+&electrons
+   diagonalization		= 'david'
+   conv_thr			= 1.0e-8
+   mixing_beta			= 0.3
+   startingpot			= 'file'
+/
+
+ATOMIC_SPECIES
+Bi 208.9804 Bi_MT_PBE.UPF
+
+ATOMIC_POSITIONS angstrom
+Bi               2.1741365286        1.2534648842        9.9637479114
+Bi              -0.0014834904        2.5095699780       11.6986520886
+
+K_POINTS tpiba_b
+4
+0.000 0.000 0.000 100
+0.500 0.287 0.000 50
+0.667 0.000 0.000 100
+0.000 0.000 0.000 1
