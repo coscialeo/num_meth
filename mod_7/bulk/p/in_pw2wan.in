@@ -1,0 +1,7 @@
+&inputpp
+   outdir		= './wan_out'
+   prefix		= 'p_wan'
+   seedname		= 'wan'
+   !scdm_proj		= .true.
+   !scdm_entanglement	= 'isolated'
+/
