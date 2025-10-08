@@ -1,0 +1,39 @@
+&control
+   calculation			= 'scf'
+   restart_mode			= 'from_scratch'
+   pseudo_dir			= '../pseudo/'
+   outdir			= './scf_out/'
+   prefix			= 'p_scf'
+   
+/
+
+&system
+   ibrav			= 4
+   celldm(1)			= 6.2001
+   celldm(3)			= 5.0
+   nat				= 2
+   ntyp				= 1
+   noncolin			= .true.
+   lspinorb			= .true.
+   starting_magnetization(1)	= 0.01
+   ecutwfc			= 50
+   ecutrho			= 200
+   occupations			= 'fixed'
+/
+
+&electrons
+   diagonalization		= 'david'
+   conv_thr			= 1.0e-8
+   mixing_beta			= 0.3
+   !startingpot			= 'file'
+/
+
+ATOMIC_SPECIES
+P 30.973762 P_ONCV_PBE_FR-1.1.upf
+
+ATOMIC_POSITIONS angstrom
+P 1.64153 0.94862 10.00415
+P 0.00072 1.89594 11.24684
+
+K_POINTS AUTOMATIC
+12 12 1 1 1 0
