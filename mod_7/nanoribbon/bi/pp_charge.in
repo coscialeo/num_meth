@@ -1,0 +1,16 @@
+&inputpp
+   prefix		= 'bi_loc'
+   outdir		= './loc_out'
+   plot_num		= 7
+   kpoint		= 1
+   kband		= 81
+   lsign		= .false.
+   spin_component(1)	= 0
+/
+
+&plot
+   filepp(1)		= 'charge-density'
+   iflag		= 3
+   output_format	= 6
+   fileout		= 'charge_k1_n81.cub'
+/
