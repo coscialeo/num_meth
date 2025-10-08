@@ -1,0 +1,5 @@
+&dos
+   outdir	= './nscf_out'
+   prefix	= 'bi_nscf'
+   fildos	= 'dos.dat'
+/
