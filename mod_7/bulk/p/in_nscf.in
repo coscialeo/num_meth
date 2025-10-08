@@ -1,0 +1,39 @@
+&control
+   calculation			= 'nscf'
+   restart_mode			= 'from_scratch'
+   pseudo_dir			= '../pseudo/'
+   outdir			= './nscf_out/'
+   prefix			= 'p_nscf'
+   
+/
+
+&system
+   ibrav			= 4
+   celldm(1)			= 6.19998503
+   celldm(3)			= 5.0
+   nat				= 2
+   ntyp				= 1
+   noncolin			= .true.
+   lspinorb			= .true.
+   starting_magnetization	= 0.01
+   ecutwfc			= 75
+   ecutrho			= 300
+   occupations			= 'tetrahedra_opt'
+/
+
+&electrons
+   diagonalization		= 'david'
+   conv_thr			= 1.0e-8
+   mixing_beta			= 0.3
+   startingpot			= 'file'
+/
+
+ATOMIC_SPECIES
+P 30.973762 P_ONCV_PBE_FR-1.1.upf
+
+ATOMIC_POSITIONS angstrom
+P                1.6414296199        0.9486423219       10.0040213298
+P                0.0007899280        1.8958649316       11.2469686702
+
+K_POINTS AUTOMATIC
+32 32 1 0 0 0
