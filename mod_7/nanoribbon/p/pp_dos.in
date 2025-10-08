@@ -1,0 +1,7 @@
+&dos
+   outdir	= './bands_out'
+   prefix	= 'p_bands'
+   fildos	= 'dos.dat'
+   bz_sum	= 'smearing'
+   degauss	= 0.001
+/
