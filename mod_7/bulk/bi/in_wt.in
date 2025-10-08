@@ -1,0 +1,36 @@
+emacs &TB_FILE
+Hrfile = 'wan_hr.dat'
+Package = 'QE'
+/
+
+&CONTROL
+Z2_3D_calc            = T
+/
+
+&SYSTEM
+SOC = 1                 ! soc
+NumOccupied = 10        ! Number of occupied Wannier bands
+Bx= 0, By= 0, Bz= 0
+/
+
+&PARAMETERS
+Nk1 = 201            ! number k points  odd number would be better
+Nk2 = 201           ! number k points  odd number would be better
+/
+
+LATTICE
+bohr
+	8.22094664E+000  0.000000000000000E+000  0.000000000000000E+000
+       -4.11047332E+000  7.119548633E+000  0.000000000000000E+000
+        0.000000000000000E+000  0.000000000000000E+000  4.11047332E+001
+
+ATOM_POSITIONS
+2
+angstrom
+	Bi  2.1741365286  1.2534648842   9.9637479114
+	Bi -0.0014834904  2.5095699780  11.6986520886
+
+PROJECTORS
+4 4
+Bi  s, pz, px, py
+Bi  s, pz, px, py
