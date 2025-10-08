@@ -1,0 +1,39 @@
+&control
+   calculation			= 'scf'
+   restart_mode			= 'from_scratch'
+   pseudo_dir			= '../pseudo/'
+   outdir			= './scf_out/'
+   prefix			= 'bi_scf'
+   
+/
+
+&system
+   ibrav			= 4
+   celldm(1)			= 8.2198
+   celldm(3)			= 5.0
+   nat				= 2
+   ntyp				= 1
+   noncolin			= .true.
+   lspinorb			= .true.
+   starting_magnetization(1)	= 0.01
+   ecutwfc			= 50
+   ecutrho			= 200
+   occupations			= 'fixed'
+/
+
+&electrons
+   diagonalization		= 'david'
+   conv_thr			= 1.0e-8
+   mixing_beta			= 0.3
+   !startingpot			= 'file'
+/
+
+ATOMIC_SPECIES
+Bi 208.9804 Bi_MT_PBE.UPF
+
+ATOMIC_POSITIONS angstrom
+Bi 2.17420 1.25307 9.96343
+Bi -0.00185 2.50944 11.69897
+
+K_POINTS AUTOMATIC
+12 12 1 1 1 0
