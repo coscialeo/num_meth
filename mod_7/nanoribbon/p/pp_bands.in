@@ -1,0 +1,5 @@
+&bands
+    outdir	= './bands_out'
+    prefix	= 'p_bands'
+    filband	= 'bands.dat'
+/
