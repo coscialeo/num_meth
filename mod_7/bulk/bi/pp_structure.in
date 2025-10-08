@@ -1,0 +1,11 @@
+&inputpp
+   prefix		= 'bi_nscf'
+   outdir		= './nscf_out/'
+   plot_num		= 0
+/
+
+&plot
+   iflag		= 3
+   output_format	= 5
+   fileout		= 'structure.xsf'
+/
