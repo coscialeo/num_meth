@@ -33,12 +33,13 @@ struct bloc {
 
 struct result {
     bloc bl;
-    double energy, truncation_error, entropy, correlation;
+    double energy, truncation_error, entropy, correlation, magnetization, pair_correlation;
     int dist;
     MatrixXd transformation_matrix, gs_vector;
 };
 
-vector<double> energies, truncation_errors, entropies, correlations;
+vector<double> energies, truncation_errors, entropies, correlations, magnetizations, pair_correlations;
+double last_energy, last_entropy;
 
 map<pair<string, int>, bloc> bloc_disk;
 map<pair<string, int>, MatrixXd> trmat_disk;
@@ -258,10 +259,46 @@ result dmrg_step(bloc sys, const bloc& env, int m, const string& sys_label, ostr
         out_stream << endl << "Creating reduced density matrix..." << endl;
     }
     
-    int gs_sector = distance(sector_energies.begin(), min_element(sector_energies.begin(), sector_energies.end()));
+    // After diagonalizing all sectors, find the ground state sector and state
+    double min_energy = std::numeric_limits<double>::max();
+    double second_min_energy = std::numeric_limits<double>::max();
+    int gs_sector = -1, second_gs_sector = -1;
+    MatrixXd gs_vec, second_gs_vec;
+
+    // Find the two lowest energy sectors
+    for (const auto& kv : sector_energies) {
+        if (kv.second < min_energy) {
+            second_min_energy = min_energy;
+            second_gs_sector = gs_sector;
+            min_energy = kv.second;
+            gs_sector = kv.first;
+        } else if (kv.second < second_min_energy) {
+            second_min_energy = kv.second;
+            second_gs_sector = kv.first;
+        }
+    }
+
+    gs_vec = sector_gs[gs_sector];
+    second_gs_vec = (second_gs_sector != -1) ? sector_gs[second_gs_sector] : MatrixXd();
+
+    double gs_energy = min_energy;
     int gs_sector_dim = super_ham_of_sector[gs_sector].rows();
+
+    // If the two lowest energies are close, use overlap with guess to select ground state
+    if (fabs(min_energy - second_min_energy) < 1e-8 && second_gs_sector != -1 && guess.rows() == gs_vec.rows()) {
+        double overlap1 = std::abs((gs_vec.transpose() * guess)(0, 0));
+        double overlap2 = std::abs((second_gs_vec.transpose() * guess)(0, 0));
+
+        if (overlap2 > overlap1) {
+            gs_sector = second_gs_sector;
+            gs_vec = second_gs_vec;
+            gs_energy = second_min_energy;
+            gs_sector_dim = super_ham_of_sector[gs_sector].rows();
+            out_stream << "Degenerate ground states detected. Selected state with higher overlap to guess." << endl;
+        }
+    }
+
     int my_m = min(m, e_sys.basis_size);
-    double gs_energy = sector_energies[gs_sector];
 
     SparseMatrix<double> gs_rho(e_sys.basis_size, e_sys.basis_size), gs_vect(e_sys.basis_size, e_env.basis_size);
     vector<Triplet<double>> tripletList;
@@ -442,9 +479,26 @@ result dmrg_step(bloc sys, const bloc& env, int m, const string& sys_label, ostr
     if (trunc_err > 1e-5)
         out_stream << "Warning: High truncation error = " << trunc_err << endl;
 
+    double magnetization = 0.0;
+    for (int sys_idx = 0; sys_idx < sys.basis_size; ++sys_idx) {
+        for (int e_env_idx = 0; e_env_idx < env.basis_size; ++e_env_idx) {
+            magnetization += gs_vect.coeff(site_dim * sys_idx, e_env_idx) * gs_vect.coeff(site_dim * sys_idx, e_env_idx);
+            magnetization -= gs_vect.coeff(site_dim * sys_idx + 1, e_env_idx) * gs_vect.coeff(site_dim * sys_idx + 1, e_env_idx);
+        }
+    }
+
+    double pair_correlation = 0.0;
+    for (int sys_idx = 0; sys_idx < sys.basis_size; ++sys_idx) {
+        for (int env_idx = 0; env_idx < env.basis_size; ++env_idx) {
+            pair_correlation += gs_vect.coeff(site_dim * sys_idx, env_idx * site_dim) * gs_vect.coeff(site_dim * sys_idx, env_idx * site_dim);
+            pair_correlation += gs_vect.coeff(site_dim * sys_idx + 1, env_idx * site_dim + 1) * gs_vect.coeff(site_dim * sys_idx + 1, env_idx * site_dim + 1);
+            pair_correlation -= gs_vect.coeff(site_dim * sys_idx, env_idx * site_dim + 1) * gs_vect.coeff(site_dim * sys_idx, env_idx * site_dim + 1);
+            pair_correlation -= gs_vect.coeff(site_dim * sys_idx + 1, env_idx * site_dim) * gs_vect.coeff(site_dim * sys_idx + 1, env_idx * site_dim);
+        }
+    }
+
     int dist = e_sys.length - fixed_pos;
     double correlation = 0.0;
-
     if (finite && sys_label == "r") {
         
         if (dist == 1) {
@@ -484,6 +538,8 @@ result dmrg_step(bloc sys, const bloc& env, int m, const string& sys_label, ostr
     res.entropy = entropy;
     res.dist = dist;
     res.correlation = correlation;
+    res.magnetization = magnetization;
+    res.pair_correlation = pair_correlation;
     res.transformation_matrix = eig_vects_in_e_sys_basis;
     res.gs_vector = gs_vect;
 
@@ -589,13 +645,19 @@ void finite_system_algorithm(ostream& out_stream) {
             out_stream << endl << graphic(sys_bloc, env_bloc, sys_label, sweep) << endl;
             result res = dmrg_step(sys_bloc, env_bloc, m, sys_label, out_stream, true, guess);
 
-            energies[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.energy;
-            truncation_errors[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.truncation_error;
-            entropies[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.entropy;
+            if (sys_label == "r") {
+                energies[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.energy;
+                truncation_errors[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.truncation_error;
+                entropies[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.entropy;
+                magnetizations[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.magnetization;
+                pair_correlations[(sweep - 1) * (num_sites - 4) + sys_bloc.length - 1] = res.pair_correlation;
 
-            if (sys_label == "r" && res.dist > 0)
-                correlations[(sweep - 1) * (num_sites - fixed_pos - 3) + sys_bloc.length - fixed_pos] = res.correlation;
-
+                if (res.dist > 0)
+                    correlations[(sweep - 1) * (num_sites - fixed_pos - 3) + sys_bloc.length - fixed_pos] = res.correlation;
+            }
+            last_energy = res.energy;
+            last_entropy = res.entropy;
+            
             sys_bloc = res.bl;
             sys_trmat = res.transformation_matrix;
             last_gs = res.gs_vector;
@@ -683,6 +745,7 @@ void write_output_file(ostream& out_stream) {
     for (int i = 0; i < energies.size(); ++i) {
         energy_file << energies[i] << "\n";
     }
+    energy_file << last_energy << "\n";
     energy_file.close();
 
     ofstream trunc_file(prefix + "_truncation_error.txt");
@@ -703,7 +766,28 @@ void write_output_file(ostream& out_stream) {
     for (int i = 0; i < entropies.size(); ++i) {
         entropy_file << entropies[i] << "\n";
     }
+    entropy_file << last_entropy << "\n";
     entropy_file.close();
+
+    ofstream magnetization_file(prefix + "_magnetization.txt");
+    if (!magnetization_file.is_open()) {
+        out_stream << "Error: Could not open " << prefix << "_magnetization.txt for writing." << endl;
+        return;
+    }
+    for (int i = 0; i < magnetizations.size(); ++i) {
+        magnetization_file << magnetizations[i] << "\n";
+    }
+    magnetization_file.close();
+
+    ofstream pair_correlation_file(prefix + "_pair_correlation.txt");
+    if (!pair_correlation_file.is_open()) {
+        out_stream << "Error: Could not open " << prefix << "_pair_correlation.txt for writing." << endl;
+        return;
+    }
+    for (int i = 0; i < pair_correlations.size(); ++i) {
+        pair_correlation_file << pair_correlations[i] << "\n";
+    }
+    pair_correlation_file.close();
 
     ofstream correlation_file(prefix + "_correlation.txt");
     if (!correlation_file.is_open()) {
@@ -718,6 +802,8 @@ void write_output_file(ostream& out_stream) {
     out_stream << endl << "Results written to " << prefix << "_energy.txt, "
                << prefix << "_truncation_error.txt, "
                << prefix << "_entropy.txt, "
+               << prefix << "_magnetization.txt, "
+               << prefix << "_pair_correlation.txt, "
                << prefix << "_correlation.txt" << endl << endl;
 }
 
@@ -732,6 +818,8 @@ int main() {
     energies.resize( (num_sites - 4) * num_sweeps );
     truncation_errors.resize( (num_sites - 4) * num_sweeps );
     entropies.resize( (num_sites - 4) * num_sweeps );
+    magnetizations.resize( (num_sites - 4) * num_sweeps );
+    pair_correlations.resize( (num_sites - 4) * num_sweeps );
     correlations.resize( (num_sites - fixed_pos - 3) * num_sweeps );
 
     initParallel();
